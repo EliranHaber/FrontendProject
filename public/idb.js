@@ -27,6 +27,7 @@ window.idb.openCostsDB = function(databaseName, databaseVersion) {
                 addCost: window.idb.addCost,
                 getReport: window.idb.getReport,
                 clearAll: window.idb.clearAll,
+                loadExchangeRates: window.idb.loadExchangeRates,
                 // expose the raw IndexedDB handle if needed
                 raw: db
             });
@@ -191,3 +192,20 @@ window.idb.clearAll = function() {
 
 // Backwards compatibility for any code referring to window.db
 window.db = window.idb;
+
+/**
+ * Loads exchange rates JSON from a URL and caches it on window.idb.exchangeRates
+ * @param {string} url - URL to a JSON file or API returning an object like { USD:1, GBP:2, EURO:0.7, ILS:3.4 }
+ * @returns {Promise<Object>} The loaded rates object
+ */
+window.idb.loadExchangeRates = function(url) {
+    return fetch(url)
+        .then(response => {
+            if (!response.ok) { throw new Error("Failed to fetch exchange rates"); }
+            return response.json();
+        })
+        .then(rates => {
+            window.idb.exchangeRates = rates;
+            return rates;
+        });
+};
