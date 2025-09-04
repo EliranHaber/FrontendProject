@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <title>IndexedDB Library Test</title>
+</head>
+<body>
+   <h1>IndexedDB Library Test</h1>
+   <p>Open browser console to see test results</p>
+   
+   <script src="idb.js"></script>
+   <script>
+     // Debug: Check if library loaded
+     console.log("Library loading check:");
+     console.log("window.db exists:", !!window.db);
+     console.log("window.db type:", typeof window.db);
+     if (window.db) {
+       console.log("window.db methods:", Object.keys(window.db));
+     }
+     
+     async function test() {
+       try {
+         console.log("Starting IndexedDB library test...");
+         
+         // Check if the library loaded properly
+         if (!window.db) {
+           throw new Error("IndexedDB library not loaded. window.db is undefined.");
+         }
+         
+         console.log("✓ IndexedDB library loaded successfully");
+         
+                   const dbConnection = await window.db.openCostsDB("costsdb", 1);
+          
+          if(dbConnection) {
+            console.log("✓ Creating database succeeded");
+          }
+          
+          const result1 = await window.db.addCost({
+           sum: 200, 
+           currency: "USD", 
+           category: "FOOD",
+           description: "pizza"
+         });
+         
+         if(result1) {
+           console.log("✓ Adding 1st cost item succeeded:", result1);
+         }
+         
+                   const result2 = await window.db.addCost({
+           sum: 400, 
+           currency: "USD", 
+           category: "CAR",
+           description: "fuel"
+         });
+         
+         if(result2) {
+           console.log("✓ Adding 2nd cost item succeeded:", result2);
+         }
+         
+                   // Test getReport function
+          const report = await window.db.getReport(2025, 1, "USD");
+         console.log("✓ Monthly report generated:", report);
+         
+         console.log("All tests completed successfully!");
+         
+       } catch (error) {
+         console.error("Test failed:", error);
+       }
+     }
+     
+     test();
+   </script>
+</body>
+</html>
