@@ -4,7 +4,7 @@
 const storeName = "expenses";
 
 // Global database object that will be accessible when script is loaded
-window.db = {};
+window.idb = {};
 
 /**
  * Opens or creates the IndexedDB database
@@ -12,7 +12,7 @@ window.db = {};
  * @param {number} databaseVersion - Version number for the database
  * @returns {Promise} Promise that resolves to the database object
  */
-window.db.openCostsDB = function(databaseName, databaseVersion) {
+window.idb.openCostsDB = function(databaseName, databaseVersion) {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(databaseName, databaseVersion);
         
@@ -22,7 +22,14 @@ window.db.openCostsDB = function(databaseName, databaseVersion) {
         
         request.onsuccess = () => {
             const db = request.result;
-            resolve(db);
+            // Return a small wrapper so callers can do: const db = await idb.openCostsDB(...); await db.addCost(...)
+            resolve({
+                addCost: window.idb.addCost,
+                getReport: window.idb.getReport,
+                clearAll: window.idb.clearAll,
+                // expose the raw IndexedDB handle if needed
+                raw: db
+            });
         };
         
         request.onupgradeneeded = (event) => {
@@ -50,7 +57,7 @@ window.db.openCostsDB = function(databaseName, databaseVersion) {
  * @param {Object} cost - Cost object with sum, currency, category, and description
  * @returns {Promise} Promise that resolves to the newly added cost item
  */
-window.db.addCost = function(cost) {
+window.idb.addCost = function(cost) {
     return new Promise((resolve, reject) => {
         // Validate required properties
         if (!cost.sum || !cost.currency || !cost.category || !cost.description) {
@@ -72,8 +79,8 @@ window.db.addCost = function(cost) {
         };
         
         // Get database instance and add cost
-        this.openCostsDB("costsdb", 1).then(db => {
-            const transaction = db.transaction([storeName], "readwrite");
+        window.idb.openCostsDB("costsdb", 1).then(({ raw }) => {
+            const transaction = raw.transaction([storeName], "readwrite");
             const store = transaction.objectStore(storeName);
             
             const request = store.add(costItem);
@@ -102,10 +109,10 @@ window.db.addCost = function(cost) {
  * @param {string} currency - Target currency for the report
  * @returns {Promise} Promise that resolves to the report object
  */
-window.db.getReport = function(year, month, currency) {
+window.idb.getReport = function(year, month, currency) {
     return new Promise((resolve, reject) => {
-        this.openCostsDB("costsdb", 1).then(db => {
-            const transaction = db.transaction([storeName], "readonly");
+        window.idb.openCostsDB("costsdb", 1).then(({ raw }) => {
+            const transaction = raw.transaction([storeName], "readonly");
             const store = transaction.objectStore(storeName);
             const request = store.getAll();
             
@@ -119,8 +126,8 @@ window.db.getReport = function(year, month, currency) {
                 
                 // Get exchange rates (fallback defaults)
                 const fallbackRates = { USD: 1, GBP: 1.8, EURO: 0.7, ILS: 3.4 };
-                const rates = (typeof window !== 'undefined' && window.db && window.db.exchangeRates)
-                    ? window.db.exchangeRates
+                const rates = (typeof window !== 'undefined' && window.idb && window.idb.exchangeRates)
+                    ? window.idb.exchangeRates
                     : fallbackRates;
 
                 // Helper to convert via USD
@@ -170,10 +177,10 @@ window.db.getReport = function(year, month, currency) {
  * Clears all cost items from the database (useful for testing)
  * @returns {Promise<void>}
  */
-window.db.clearAll = function() {
+window.idb.clearAll = function() {
     return new Promise((resolve, reject) => {
-        this.openCostsDB("costsdb", 1).then(db => {
-            const transaction = db.transaction([storeName], "readwrite");
+        window.idb.openCostsDB("costsdb", 1).then(({ raw }) => {
+            const transaction = raw.transaction([storeName], "readwrite");
             const store = transaction.objectStore(storeName);
             const req = store.clear();
             req.onsuccess = () => resolve();
@@ -181,3 +188,6 @@ window.db.clearAll = function() {
         }).catch(reject);
     });
 };
+
+// Backwards compatibility for any code referring to window.db
+window.db = window.idb;
