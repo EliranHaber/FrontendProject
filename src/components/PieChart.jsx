@@ -34,7 +34,7 @@ const PieChart = () => {
     const years = Array.from({ length: 7 }, (_, i) => currentYear - 3 + i);
 
     const generateChartData = async () => {
-        if (!window.db) {
+        if (!window.idb) {
             setError('Database not available. Please refresh the page.');
             return;
         }
@@ -48,7 +48,7 @@ const PieChart = () => {
                 await currencyService.fetchExchangeRates();
             }
 
-            const reportData = await window.db.getReport(selectedYear, selectedMonth, selectedCurrency);
+            const reportData = await window.idb.getReport(selectedYear, selectedMonth, selectedCurrency);
 
             // Group costs by category and sum converted amounts
             const categoryTotals = {};
@@ -116,7 +116,7 @@ const PieChart = () => {
         return null;
     };
 
-    if (!window.db) {
+    if (!window.idb) {
         return (
             <Paper elevation={3} sx={{ p: 3 }}>
                 <Alert severity="warning">

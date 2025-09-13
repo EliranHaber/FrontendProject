@@ -40,7 +40,7 @@ const Reports = () => {
     const years = Array.from({ length: 7 }, (_, i) => currentYear - 3 + i);
 
     const generateReport = async () => {
-        if (!window.db) {
+        if (!window.idb) {
             setError('Database not available. Please refresh the page.');
             return;
         }
@@ -54,7 +54,7 @@ const Reports = () => {
                 await currencyService.fetchExchangeRates();
             }
 
-            const reportData = await window.db.getReport(selectedYear, selectedMonth, selectedCurrency);
+            const reportData = await window.idb.getReport(selectedYear, selectedMonth, selectedCurrency);
             setReport(reportData);
         } catch (err) {
             console.error('Failed to generate report:', err);
@@ -81,7 +81,7 @@ const Reports = () => {
         }
     };
 
-    if (!window.db) {
+    if (!window.idb) {
         return (
             <Paper elevation={3} sx={{ p: 3 }}>
                 <Alert severity="warning">

@@ -94,7 +94,7 @@ const Settings = () => {
 
     const handleClearDatabase = async () => {
         try {
-            await window.db.clearAll();
+            await window.idb.clearAll();
             setMessage({ type: 'success', text: 'All cost data cleared from IndexedDB.' });
             setTimeout(() => setMessage({ type: '', text: '' }), 3000);
         } catch (e) {

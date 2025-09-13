@@ -85,8 +85,8 @@ const AddCostForm = ({ onCostAdded }) => {
         setIsSubmitting(true);
         
         try {
-            // Use the global db object from idb.js
-            const costItem = await window.db.addCost({
+            // Use the global idb object from idb.js
+            const costItem = await window.idb.addCost({
                 sum: parseFloat(formData.sum),
                 currency: formData.currency,
                 category: formData.category,

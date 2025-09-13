@@ -38,8 +38,8 @@ class CurrencyService {
             const rates = await response.json();
             this.exchangeRates = rates;
             // Expose rates to vanilla idb library if available
-            if (typeof window !== 'undefined' && window.db) {
-                window.db.exchangeRates = { ...rates };
+            if (typeof window !== 'undefined' && window.idb) {
+                window.idb.exchangeRates = { ...rates };
             }
             return rates;
         } catch (error) {

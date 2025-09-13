@@ -30,7 +30,7 @@ const BarChart = () => {
     ];
 
     const generateChartData = async () => {
-        if (!window.db) {
+        if (!window.idb) {
             setError('Database not available. Please refresh the page.');
             return;
         }
@@ -49,7 +49,7 @@ const BarChart = () => {
             // Get data for each month of the selected year
             for (let month = 1; month <= 12; month++) {
                 try {
-                    const reportData = await window.db.getReport(selectedYear, month, selectedCurrency);
+                    const reportData = await window.idb.getReport(selectedYear, month, selectedCurrency);
                     const total = reportData.costs.reduce((sum, cost) => sum + (typeof cost.convertedSum === 'number' ? cost.convertedSum : cost.sum), 0);
                     
                     monthlyData.push({
@@ -114,7 +114,7 @@ const BarChart = () => {
         return null;
     };
 
-    if (!window.db) {
+    if (!window.idb) {
         return (
             <Paper elevation={3} sx={{ p: 3 }}>
                 <Alert severity="warning">

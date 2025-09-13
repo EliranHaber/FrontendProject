@@ -12,10 +12,10 @@
    <script>
      // Debug: Check if library loaded
      console.log("Library loading check:");
-     console.log("window.db exists:", !!window.db);
-     console.log("window.db type:", typeof window.db);
-     if (window.db) {
-       console.log("window.db methods:", Object.keys(window.db));
+     console.log("window.idb exists:", !!window.idb);
+     console.log("window.idb type:", typeof window.idb);
+     if (window.idb) {
+       console.log("window.idb methods:", Object.keys(window.idb));
      }
      
      async function test() {
@@ -23,19 +23,19 @@
          console.log("Starting IndexedDB library test...");
          
          // Check if the library loaded properly
-         if (!window.db) {
-           throw new Error("IndexedDB library not loaded. window.db is undefined.");
+         if (!window.idb) {
+           throw new Error("IndexedDB library not loaded. window.idb is undefined.");
          }
          
          console.log("✓ IndexedDB library loaded successfully");
          
-                   const dbConnection = await window.db.openCostsDB("costsdb", 1);
+                   const dbConnection = await window.idb.openCostsDB("costsdb", 1);
           
           if(dbConnection) {
             console.log("✓ Creating database succeeded");
           }
           
-          const result1 = await window.db.addCost({
+          const result1 = await window.idb.addCost({
            sum: 200, 
            currency: "USD", 
            category: "FOOD",
@@ -46,7 +46,7 @@
            console.log("✓ Adding 1st cost item succeeded:", result1);
          }
          
-                   const result2 = await window.db.addCost({
+                   const result2 = await window.idb.addCost({
            sum: 400, 
            currency: "USD", 
            category: "CAR",
@@ -58,7 +58,7 @@
          }
          
                    // Test getReport function
-          const report = await window.db.getReport(2025, 1, "USD");
+          const report = await window.idb.getReport(2025, 1, "USD");
          console.log("✓ Monthly report generated:", report);
          
          console.log("All tests completed successfully!");
