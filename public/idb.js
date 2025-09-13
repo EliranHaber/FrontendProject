@@ -1,9 +1,11 @@
 // IndexedDB wrapper library for cost management application
 // This library provides Promise-based access to IndexedDB for storing and retrieving cost data
 
+// Store name for the IndexedDB object store
 const storeName = "expenses";
 
 // Global database object that will be accessible when script is loaded
+// This object contains all the database operations
 window.idb = {};
 
 /**
@@ -12,14 +14,18 @@ window.idb = {};
  * @param {number} databaseVersion - Version number for the database
  * @returns {Promise} Promise that resolves to the database object
  */
+// Opens or creates the IndexedDB database with specified name and version
 window.idb.openCostsDB = function(databaseName, databaseVersion) {
     return new Promise((resolve, reject) => {
+        // Create a request to open the database
         const request = indexedDB.open(databaseName, databaseVersion);
         
+        // Handle database opening errors
         request.onerror = () => {
             reject(new Error("Failed to open database"));
         };
         
+        // Handle successful database opening
         request.onsuccess = () => {
             const db = request.result;
             // Return a small wrapper so callers can do: const db = await idb.openCostsDB(...); await db.addCost(...)
@@ -33,17 +39,19 @@ window.idb.openCostsDB = function(databaseName, databaseVersion) {
             });
         };
         
+        // Handle database schema upgrades
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             
             // Create object store if it doesn't exist
             if (!db.objectStoreNames.contains(storeName)) {
+                // Create the main object store for expenses
                 const store = db.createObjectStore(storeName, { 
                     keyPath: "id", 
                     autoIncrement: true 
                 });
                 
-                // Create indexes for efficient querying
+                // Create indexes for efficient querying by date, year, month, and category
                 store.createIndex("date", "date", { unique: false });
                 store.createIndex("year", "year", { unique: false });
                 store.createIndex("month", "month", { unique: false });
@@ -58,15 +66,17 @@ window.idb.openCostsDB = function(databaseName, databaseVersion) {
  * @param {Object} cost - Cost object with sum, currency, category, and description
  * @returns {Promise} Promise that resolves to the newly added cost item
  */
+// Adds a new cost item to the database with validation
 window.idb.addCost = function(cost) {
     return new Promise((resolve, reject) => {
-        // Validate required properties
+        // Validate required properties before adding
+        // Check if all required fields are present
         if (!cost.sum || !cost.currency || !cost.category || !cost.description) {
             reject(new Error("Missing required properties: sum, currency, category, description"));
             return;
         }
         
-        // Get current date
+        // Get current date and create cost item object
         const now = new Date();
         const costItem = {
             sum: cost.sum,
@@ -79,13 +89,15 @@ window.idb.addCost = function(cost) {
             day: now.getDate()
         };
         
-        // Get database instance and add cost
+        // Get database instance and add the cost item
         window.idb.openCostsDB("costsdb", 1).then(({ raw }) => {
             const transaction = raw.transaction([storeName], "readwrite");
             const store = transaction.objectStore(storeName);
             
+            // Add the cost item to the store
             const request = store.add(costItem);
             
+            // Handle successful addition
             request.onsuccess = () => {
                 // Return strictly the fields required by the spec
                 resolve({
@@ -96,6 +108,7 @@ window.idb.addCost = function(cost) {
                 });
             };
             
+            // Handle addition errors
             request.onerror = () => {
                 reject(new Error("Failed to add cost item"));
             };
@@ -110,28 +123,33 @@ window.idb.addCost = function(cost) {
  * @param {string} currency - Target currency for the report
  * @returns {Promise} Promise that resolves to the report object
  */
+// Generates a detailed report for a specific month and year
 window.idb.getReport = function(year, month, currency) {
     return new Promise((resolve, reject) => {
+        // Open database and get all costs
         window.idb.openCostsDB("costsdb", 1).then(({ raw }) => {
+            // Create read-only transaction and get all records
             const transaction = raw.transaction([storeName], "readonly");
             const store = transaction.objectStore(storeName);
             const request = store.getAll();
             
+            // Process the retrieved costs
             request.onsuccess = () => {
                 const allCosts = request.result;
                 
                 // Filter costs for the specified month and year
+                // Get only costs from the specified month and year
                 const monthCosts = allCosts.filter(cost => 
                     cost.year === year && cost.month === month
                 );
                 
-                // Get exchange rates (fallback defaults)
+                // Get exchange rates (use cached rates or fallback defaults)
                 const fallbackRates = { USD: 1, GBP: 1.8, EURO: 0.7, ILS: 3.4 };
                 const rates = (typeof window !== 'undefined' && window.idb && window.idb.exchangeRates)
                     ? window.idb.exchangeRates
                     : fallbackRates;
 
-                // Helper to convert via USD
+                // Helper function to convert currency amounts via USD
                 const convert = (amount, fromCurrency, toCurrency) => {
                     if (!amount || fromCurrency === toCurrency) { return amount; }
                     const fromRate = rates[fromCurrency];
@@ -141,7 +159,7 @@ window.idb.getReport = function(year, month, currency) {
                     return usdAmount * toRate;
                 };
 
-                // Prepare costs with convertedSum in target currency while keeping original currency
+                // Prepare costs with converted amounts in target currency
                 const detailedCosts = monthCosts.map(cost => {
                     const convertedSum = convert(cost.sum, cost.currency, currency);
                     return {
@@ -154,9 +172,10 @@ window.idb.getReport = function(year, month, currency) {
                     };
                 });
                 
-                // Calculate total
+                // Calculate total amount in target currency
                 const total = detailedCosts.reduce((sum, cost) => sum + (cost.convertedSum || 0), 0);
                 
+                // Create the final report object
                 const report = {
                     year: year,
                     month: month,
@@ -167,6 +186,7 @@ window.idb.getReport = function(year, month, currency) {
                 resolve(report);
             };
             
+            // Handle retrieval errors
             request.onerror = () => {
                 reject(new Error("Failed to retrieve costs"));
             };
@@ -178,19 +198,25 @@ window.idb.getReport = function(year, month, currency) {
  * Clears all cost items from the database (useful for testing)
  * @returns {Promise<void>}
  */
+// Clears all cost items from the database (useful for testing)
 window.idb.clearAll = function() {
     return new Promise((resolve, reject) => {
+        // Open database and clear all records
         window.idb.openCostsDB("costsdb", 1).then(({ raw }) => {
+            // Create write transaction and clear the store
             const transaction = raw.transaction([storeName], "readwrite");
             const store = transaction.objectStore(storeName);
             const req = store.clear();
+            // Handle successful clearing
             req.onsuccess = () => resolve();
+            // Handle clearing errors
             req.onerror = () => reject(new Error("Failed to clear database"));
         }).catch(reject);
     });
 };
 
 // Backwards compatibility for any code referring to window.db
+// This ensures existing code continues to work
 window.db = window.idb;
 
 /**
@@ -198,12 +224,16 @@ window.db = window.idb;
  * @param {string} url - URL to a JSON file or API returning an object like { USD:1, GBP:2, EURO:0.7, ILS:3.4 }
  * @returns {Promise<Object>} The loaded rates object
  */
+// Loads exchange rates from a URL and caches them
 window.idb.loadExchangeRates = function(url) {
+    // Fetch exchange rates from the provided URL
     return fetch(url)
+        // Check if the response is successful
         .then(response => {
             if (!response.ok) { throw new Error("Failed to fetch exchange rates"); }
             return response.json();
         })
+        // Cache the exchange rates and return them
         .then(rates => {
             window.idb.exchangeRates = rates;
             return rates;
